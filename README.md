@@ -1,4 +1,4 @@
-# Undugu Decentralized Charity Donation Platform
+# Undugu Decentralized Charity Donation Platform 
 
 ![with-text](https://github.com/user-attachments/assets/b6de3a8c-8c08-426f-ad90-f6ea08c768d5)
 
