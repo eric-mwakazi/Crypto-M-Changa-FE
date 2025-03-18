@@ -1,4 +1,4 @@
-# Undugu Decentralized Charity Donation Platform 
+# Undugu Decentralized Charity Donation Platform
 
 ![with-text](https://github.com/user-attachments/assets/b6de3a8c-8c08-426f-ad90-f6ea08c768d5)
 
@@ -113,6 +113,7 @@ Create a `.env` file with:
 VITE_SUPABASE_URL=your_supabse_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_ALCHEMY_RPC=your_rpc_url
+CONTRACT_ADDR=your_deploy_contract_adrr
 ```
 
 ## Usage Guide
@@ -197,6 +198,6 @@ We welcome contributions! Please follow these steps:
 MIT License
 
 ## Appendices
-1. Smartcontract Repo: [Link](https://github.com/calebomondi/charity-donation-hardhat)
-2. Sepolia deployment: [Link](https://sepolia.etherscan.io/address/0x133818926101eEE247B1188fcE4a13f993d9c6E8#code)
+1. Smartcontract Repo: [Link](https://github.com/eric-mwakazi/Crypto-M-Changa-BE)
+2. Sepolia deployment: [Link](https://sepolia.etherscan.io/address/0x84BF32b0C17B9239Fa1b57c5e28076dd966fCaf7#code)
 3. Undugu Live : [Link](https://undugu-beta.vercel.app/)
