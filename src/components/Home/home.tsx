@@ -52,9 +52,16 @@ function Home() {
           </div>
           
           <p className="text-xl sm:text-2xl mb-8 text-gray-200">
-            Join the revolution in transparent, decentralized charitable giving
-          </p>
+            Join the revolution in transparent, decentralized donation and charitable giving
 
+          </p>
+          <button
+          onClick={handleConnectWallet}
+          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-6 rounded-lg text-lg font-semibold shadow-lg transition-all duration-200 flex items-center gap-2 mx-auto"
+        >
+          <Wallet className="w-6 h-6" />
+          Connect to Make a Difference
+        </button>
           {/* Impact section */}
           <div className="text-lg text-gray-300 mb-12">
             <p className="mb-4">
@@ -79,7 +86,14 @@ function Home() {
               <Users className="w-8 h-8 text-green-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Community Driven</h3>
               <p className="text-gray-400">Join a community of givers making real change happen</p>
-            </div>
+
+            </div>        <button
+          onClick={handleConnectWallet}
+          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-6 rounded-lg text-lg font-semibold shadow-lg transition-all duration-200 flex items-center gap-2 mx-auto"
+        >
+          <Wallet className="w-6 h-6" />
+          Connect to Make a Difference
+        </button>
           </div>
 
           {/* Stats section */}
