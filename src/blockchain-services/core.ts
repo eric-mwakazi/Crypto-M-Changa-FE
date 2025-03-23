@@ -1,5 +1,5 @@
 //export const contractADDR = import.meta.env.CONTRACT_ADDR;
-export const contractADDR = '0x84BF32b0C17B9239Fa1b57c5e28076dd966fCaf7';
+export const contractADDR = '0xDaD4BdaC8398f3c6060346F49D081b28155E2085';
 export const contractABI =  [
         {
            "anonymous":false,
