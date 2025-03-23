@@ -200,4 +200,4 @@ MIT License
 ## Appendices
 1. Smartcontract Repo: [Link](https://github.com/eric-mwakazi/Crypto-M-Changa-BE)
 2. Sepolia deployment: [Link](https://sepolia.etherscan.io/address/0x84BF32b0C17B9239Fa1b57c5e28076dd966fCaf7#code)
-3. Undugu Live : [Link](https://undugu-beta.vercel.app/)
+3. Undugu Live : [Link](https://crypto-mchanga.vercel.app/)
