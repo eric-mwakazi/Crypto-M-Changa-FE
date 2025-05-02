@@ -1,9 +1,9 @@
-# Undugu Decentralized Charity Donation Platform
+# Cypto-MchangaDecentralized Charity Donation Platform
 
-![with-text](https://github.com/user-attachments/assets/b6de3a8c-8c08-426f-ad90-f6ea08c768d5)
+![with-text](./public/with-text.png)
 
 ## Overview
-Undugu is blockchain-based charity donation platform that enables transparent, secure, and decentralized fundraising. The platform allows fundraiser addresses to create and manage multiple campaigns while delegating administrative control to trusted addresses, ensuring flexible management and complete transparency of donations and disbursements.
+Cypto-Mchangais blockchain-based charity donation platform that enables transparent, secure, and decentralized fundraising. The platform allows fundraiser addresses to create and manage multiple campaigns while delegating administrative control to trusted addresses, ensuring flexible management and complete transparency of donations and disbursements.
 
 ### Key Features
 - Multiple fundraising campaigns per address
@@ -201,4 +201,4 @@ MIT License
 1. Smartcontract Repo: [Link](https://github.com/eric-mwakazi/Crypto-M-Changa-BE)
 2. Sepolia deployment: [Link](https://sepolia.etherscan.io/address/0x84BF32b0C17B9239Fa1b57c5e28076dd966fCaf7#code)
 version2 --- https://sepolia.etherscan.io/address/0xDaD4BdaC8398f3c6060346F49D081b28155E2085#code
-3. Undugu Live : [Link](https://crypto-mchanga.vercel.app/)
+3. Cypto-MchangaLive : [Link](https://crypto-mchanga.vercel.app/)
