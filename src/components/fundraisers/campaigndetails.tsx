@@ -238,20 +238,27 @@ export default function CampaignDetails() {
         e.preventDefault()
         setIsGiving(true)
         try {
-            if(isNaN(Number(formValue.amount))) throw Error("Amount To Donate Should Be A Number!")
-            if(Number(formValue.amount) <= 0) throw Error("Amount To Donate Should Be Greater Than Zero!")
+            if (isNaN(Number(formValue.amount))) throw Error("Amount To Donate Should Be A Number!")
+            if (Number(formValue.amount) <= 0) throw Error("Amount To Donate Should Be Greater Than Zero!")
                 
             const id = Number(combined[0].campaign_id)
             const address = combined[0].campaignAddress
-            await donateToCampaign(id,address,Number(formValue.amount))
+            await donateToCampaign(id, address, Number(formValue.amount))
+            
+            // Close modal after successful donation
+            const modal = document.getElementById('my_modal_3') as HTMLDialogElement
+            if (modal) modal.close()
+
+            toast.success("Donation successful!")
         } catch (error) {
             console.error(`Error When Donating: ${error}`)
             toast.error(`${error}`)
         } finally {
-            setFormValue({amount : ''})
+            setFormValue({ amount: '' })
             setIsGiving(false)
         }
     }
+
 
     //handle withdraw
     const handleWithdrawal = async (e: React.FormEvent) => {
@@ -277,6 +284,51 @@ export default function CampaignDetails() {
             setIsSending(false)
         }
     }
+
+    const [formValueMpesa, setFormValueMpesa] = useState({ amount: '', phone: '' });
+    const [isSendingMpesa, setIsSendingMpesa] = useState(false);
+
+    const handleMpesaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormValueMpesa(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleMpesaDonate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSendingMpesa(true);
+    
+        try {
+            const amountInKes = Number(formValueMpesa.amount);
+            if (isNaN(amountInKes) || amountInKes <= 0) throw new Error("Enter a valid amount in KES");
+    
+            const phoneNumber = formValueMpesa.phone;
+            if (!/^07\d{8}$/.test(phoneNumber)) throw new Error("Phone must be in format 07XXXXXXXX");
+    
+            const receiver = combined[0]?.campaignAddress;
+            if (!receiver) throw new Error("Campaign address not found");
+    
+            const res = await fetch('https://mpesa-to-eth-bridge-api.vercel.app/api/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiver, amountInKes, phoneNumber }),
+            });
+    
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Failed to initiate M-Pesa payment");
+            // Close modal
+            const modal = document.getElementById('mpesa_modal') as HTMLDialogElement;
+            if (modal) modal.close();
+            toast.success("STK Push sent! Complete payment on your phone.");
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || "Something went wrong.");
+        } finally {
+            setFormValueMpesa({ amount: '', phone: '' });
+            setIsSendingMpesa(false);
+        }
+    };
+    
+
 
   return (
     <main className="">
@@ -456,45 +508,88 @@ export default function CampaignDetails() {
                                                                 campaign.isCancelled ? (
                                                                     <p className="text-center text-base text-red-600">This Fundraiser Was Cancelled. You were Refunded!</p>
                                                                 ) : (
-                                                                    <div className="grid place-items-center mt-5">
-                                                                        <button className="btn btn-success text-white btn-sm mx-1" onClick={()=>{
-                                                                            const modal = document.getElementById('my_modal_3');
-                                                                            if (modal) {
-                                                                                (modal as HTMLDialogElement).showModal();
-                                                                            }
-                                                                        }}>Donate</button>
-                                                                        <dialog id="my_modal_3" className="modal">
+                                                                    <div className="grid place-items-center mt-5 space-y-2">
+                                                                        {/* Donate with Crypto */}
+                                                                        <button className="btn btn-success text-white btn-sm mx-1" onClick={() => {
+                                                                            const modal = document.getElementById('crypto_modal');
+                                                                            if (modal) (modal as HTMLDialogElement).showModal();
+                                                                        }}>
+                                                                            Donate With Crypto
+                                                                        </button>
+
+                                                                        {/* Donate with M-Pesa */}
+                                                                        <button className="btn btn-accent text-white btn-sm mx-1" onClick={() => {
+                                                                            const modal = document.getElementById('mpesa_modal');
+                                                                            if (modal) (modal as HTMLDialogElement).showModal();
+                                                                        }}>
+                                                                            Donate With M-Pesa
+                                                                        </button>
+
+                                                                        {/* Crypto Modal */}
+                                                                        <dialog id="crypto_modal" className="modal">
                                                                             <div className="modal-box">
                                                                                 <form method="dialog">
-                                                                                {/* if there is a button in form, it will close the modal */}
-                                                                                <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                                                                                    <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
                                                                                 </form>
-                                                                                <h3 className="font-semibold text-lg text-green-600 p-2 text-center">Sharing Is Caring</h3>
-                                                                                <div>
-                                                                                    <form onSubmit={handleDonate} className="flex flex-col justify-center items-center p-1">
-                                                                                        <label className="input input-bordered w-full flex items-center justify-between gap-2 mb-1 font-semibold text-green-600">
-                                                                                            Amount
-                                                                                            <input 
-                                                                                                type="text" 
-                                                                                                id="amount"
-                                                                                                name="amount"
-                                                                                                value={formValue.amount}
-                                                                                                onChange={handleChange}
-                                                                                                className="md:w-5/6 p-2 dark:text-white text-gray-700" 
-                                                                                                placeholder="In ETH" 
-                                                                                                required
-                                                                                            />
-                                                                                        </label>
-                                                                                        <div className="mt-2 w-full grid place-items-center">
-                                                                                            <button className="btn btn-success btn-sm text-base-300 w-1/5" type="submit">
-                                                                                                {isGiving ? (<p className="text-center"><span>Sending </span><span className="loading loading-ring loading-xs"></span></p>) : 'Support'}
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    </form>
-                                                                                </div>
+                                                                                <h3 className="font-semibold text-lg text-green-600 p-2 text-center">Donate with Crypto</h3>
+                                                                                <form onSubmit={handleDonate} className="flex flex-col justify-center items-center p-1">
+                                                                                    <label className="input input-bordered w-full flex items-center justify-between gap-2 mb-1 font-semibold text-green-600">
+                                                                                        Amount (ETH)
+                                                                                        <input 
+                                                                                            type="text" 
+                                                                                            name="amount"
+                                                                                            value={formValue.amount}
+                                                                                            onChange={handleChange}
+                                                                                            className="md:w-5/6 p-2 dark:text-white text-gray-700"
+                                                                                            required
+                                                                                        />
+                                                                                    </label>
+                                                                                    <button className="btn btn-success btn-sm text-base-300 mt-2 w-1/2" type="submit">
+                                                                                        {isGiving ? (<p>Sending <span className="loading loading-ring loading-xs"></span></p>) : 'Support'}
+                                                                                    </button>
+                                                                                </form>
+                                                                            </div>
+                                                                        </dialog>
+
+                                                                        {/* M-Pesa Modal */}
+                                                                        <dialog id="mpesa_modal" className="modal">
+                                                                            <div className="modal-box">
+                                                                                <form method="dialog">
+                                                                                    <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                                                                                </form>
+                                                                                <h3 className="font-semibold text-lg text-orange-600 p-2 text-center">Donate with M-Pesa</h3>
+                                                                                <form onSubmit={handleMpesaDonate} className="flex flex-col justify-center items-center p-1">
+                                                                                    <label className="input input-bordered w-full flex items-center justify-between gap-2 mb-1 font-semibold text-orange-600">
+                                                                                        Amount (KES)
+                                                                                        <input 
+                                                                                            type="number" 
+                                                                                            name="amount"
+                                                                                            value={formValueMpesa.amount}
+                                                                                            onChange={handleMpesaChange}
+                                                                                            className="md:w-5/6 p-2 dark:text-white text-gray-700"
+                                                                                            required
+                                                                                        />
+                                                                                    </label>
+                                                                                    <label className="input input-bordered w-full flex items-center justify-between gap-2 mb-1 font-semibold text-orange-600">
+                                                                                        Phone Number
+                                                                                        <input 
+                                                                                            type="text" 
+                                                                                            name="phone" 
+                                                                                            placeholder="07XXXXXXXX" 
+                                                                                            value={formValueMpesa.phone}
+                                                                                            onChange={handleMpesaChange}
+                                                                                            className="md:w-5/6 p-2 dark:text-white text-gray-700"
+                                                                                            required
+                                                                                        />
+                                                                                    </label>
+                                                                                    <button className="btn btn-accent btn-sm text-base-300 mt-2 w-1/2" type="submit">
+                                                                                        {isSendingMpesa? (<p>Processing <span className="loading loading-ring loading-xs"></span></p>) : 'Send'}
+                                                                                    </button>
+                                                                                </form>
                                                                             </div>
                                                                         </dialog>
                                                                     </div>
+
                                                                 )
                                                             } 
                                                         </>
