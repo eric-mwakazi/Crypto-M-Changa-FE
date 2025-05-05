@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom"
-
+import { ethers } from 'ethers';
 import NavBar from "../navbar/navbar"
 
 import { CampaignDataArgs, ImageUrls, CombinedCampaignData, CampaignDonors, Withdrawal } from "../../types"
@@ -299,13 +299,30 @@ export default function CampaignDetails() {
     
         try {
             const amountInKes = Number(formValueMpesa.amount);
-            if (isNaN(amountInKes) || amountInKes <= 0) throw new Error("Enter a valid amount in KES");
-    
             const phoneNumber = formValueMpesa.phone;
-            if (!/^07\d{8}$/.test(phoneNumber)) throw new Error("Phone must be in format 07XXXXXXXX");
+    
+            if (isNaN(amountInKes) || amountInKes <= 0) {
+                toast.error("Enter a valid amount in KES");
+                return;
+            }
+    
+            if (amountInKes <= 0) {
+                toast.error(`Amount ${amountInKes} is too low. Try a higher amount.`);
+                return;
+            }
+    
+            if (!/^07\d{8}$/.test(phoneNumber)) {
+                toast.error("Phone must be in format 07XXXXXXXX");
+                return;
+            }
     
             const receiver = combined[0]?.campaignAddress;
-            if (!receiver) throw new Error("Campaign address not found");
+            if (!receiver) {
+                toast.error("Campaign address not found");
+                return;
+            }
+    
+            console.info(`ADDR: ${receiver}, KES: ${amountInKes}, Phone: ${phoneNumber}`);
     
             const res = await fetch('https://mpesa-to-eth-bridge-api.vercel.app/api/send', {
                 method: 'POST',
@@ -315,9 +332,14 @@ export default function CampaignDetails() {
     
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Failed to initiate M-Pesa payment");
+    
             // Close modal
             const modal = document.getElementById('mpesa_modal') as HTMLDialogElement;
             if (modal) modal.close();
+            const id = Number(combined[0].campaign_id)
+            const amountInWei = BigInt(amountInKes) * 1_000_000_000_000_000n;
+            const amountInEth = ethers.formatEther(amountInWei);
+            await donateToCampaign(id, receiver, Number(amountInEth));
             toast.success("STK Push sent! Complete payment on your phone.");
         } catch (error: any) {
             console.error(error);
