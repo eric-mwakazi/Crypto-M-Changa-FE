@@ -297,17 +297,17 @@ export default function CampaignDetails() {
         e.preventDefault();
         setIsSendingMpesa(true);
     
+        // Declare variables outside try so they are accessible in finally
+        let receiver: string | undefined;
+        let amountInKes: number = 0;
+        let id: number = 0;
+    
         try {
-            const amountInKes = Number(formValueMpesa.amount);
+            amountInKes = Number(formValueMpesa.amount);
             const phoneNumber = formValueMpesa.phone;
     
             if (isNaN(amountInKes) || amountInKes <= 0) {
                 toast.error("Enter a valid amount in KES");
-                return;
-            }
-    
-            if (amountInKes <= 0) {
-                toast.error(`Amount ${amountInKes} is too low. Try a higher amount.`);
                 return;
             }
     
@@ -316,11 +316,13 @@ export default function CampaignDetails() {
                 return;
             }
     
-            const receiver = combined[0]?.campaignAddress;
+            receiver = combined[0]?.campaignAddress;
             if (!receiver) {
                 toast.error("Campaign address not found");
                 return;
             }
+    
+            id = Number(combined[0]?.campaign_id);
     
             console.info(`ADDR: ${receiver}, KES: ${amountInKes}, Phone: ${phoneNumber}`);
     
@@ -336,19 +338,22 @@ export default function CampaignDetails() {
             // Close modal
             const modal = document.getElementById('mpesa_modal') as HTMLDialogElement;
             if (modal) modal.close();
-            const id = Number(combined[0].campaign_id)
-            const amountInWei = BigInt(amountInKes) * 1_000_000_000_000_000n;
-            const amountInEth = ethers.formatEther(amountInWei);
-            await donateToCampaign(id, receiver, Number(amountInEth));
+    
             toast.success("STK Push sent! Complete payment on your phone.");
         } catch (error: any) {
             console.error(error);
             toast.error(error.message || "Something went wrong.");
         } finally {
+            if (receiver && amountInKes && id) {
+                const amountInWei = BigInt(amountInKes) * 1_000_000_000_000_000n;
+                const amountInEth = ethers.formatEther(amountInWei);
+                await donateToCampaign(id, receiver, Number(amountInEth));
+            }
             setFormValueMpesa({ amount: '', phone: '' });
             setIsSendingMpesa(false);
         }
     };
+    
     
 
 
