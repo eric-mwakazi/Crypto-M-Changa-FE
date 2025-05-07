@@ -1,18 +1,19 @@
-import { viewCampaignDetails } from "../../blockchain-services/useCharityDonation"
+// viewothercampigns.tsx
+
 import { CampaignDataArgs, CombinedCampaignData, SerializedCampaignData } from "../../types"
 import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
-import { _web3 } from "../../blockchain-services/useCharityDonation"
 import { toast } from "react-toastify"
 import { supabase } from "../../supabase/supabaseClient"
 import { useCookies } from "react-cookie"
+import { _web3, getBalanceAndAddress, viewCampaignDetails, isActiveAdmin } from "../../blockchain-services/useCharityDonation";
 
 export default function ViewOtherCampaigns() {
     const [combined, setCombined] = useState<CombinedCampaignData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
-
+    const [, setAdmin] = useState(false);
     const [cookies, setCookie] = useCookies([`other_campaigns`])
 
     const handleRedirect = (id: string, address: string) => {
@@ -67,34 +68,44 @@ export default function ViewOtherCampaigns() {
             progress: campaign.progress,
         }));
     };
-
-    // Combine fetch operations
-    const fetchAllData = async () => {
+    
+    const checkIfAdmin = async (): Promise<boolean> => {
+        try {
+            const balanceAndAddress = await getBalanceAndAddress();
+            if (!balanceAndAddress) throw new Error("Failed to get balance and address");
+    
+            const { account } = balanceAndAddress;
+            const address = "0x7BFF65F1845b69Da42E64B68b64f49411874a22d";
+    
+            const isAdmin = await isActiveAdmin(account, address);
+            setAdmin(isAdmin); // still store in state if needed
+            return isAdmin;
+        } catch (err) {
+            console.error("Admin check failed:", err);
+            return false; // assume non-admin on error
+        }
+    };
+    
+    const fetchAllData = async (isAdmin: boolean) => {
         try {
             setIsLoading(true);
             
-            // Fetch images
             const { data: imageData, error: imageError } = await supabase
                 .from('unduguimages')
                 .select('*');
-
-            if (imageError) {
-                throw new Error(`Error fetching images: ${imageError.message}`);
-            }
-
-            // Fetch all campaign details in parallel
+    
+            if (imageError) throw new Error(`Error fetching images: ${imageError.message}`);
+    
             const combinedData = await Promise.all(
                 imageData.map(async (campaign) => {
                     try {
                         const thisCampaign = await viewCampaignDetails(campaign.frid, campaign.fraddress);
                         const { details } = thisCampaign as { details: CampaignDataArgs };
-
-                        // Process campaign data
                         const deadline = new Date(Number(details.deadline) * 1000).toLocaleDateString();
                         const progress = Math.round(
                             Number(details.raisedAmount * BigInt(100) / details.targetAmount)
                         );
-
+    
                         return {
                             ...details,
                             imageUrl: campaign?.url || null,
@@ -107,42 +118,47 @@ export default function ViewOtherCampaigns() {
                     }
                 })
             );
-
-            // Filter out failed fetches and inactive campaigns
+    
             const filteredData = combinedData
-                .filter((campaign): campaign is CombinedCampaignData => 
-                    campaign !== null && 
-                    !campaign.isCompleted && 
-                    !campaign.isCancelled
-                );
-
+                .filter((campaign): campaign is CombinedCampaignData => {
+                    if (!campaign) return false;
+                    if (!isAdmin) {
+                        return !campaign.isCompleted && !campaign.isCancelled;
+                    }
+                    return true;
+                });
+    
             setCombined(filteredData);
-            // Store the new data in cookie
-
             setCookie(`other_campaigns`, serializeCampaignData(filteredData), {
                 path: '/fundraisers',
-                maxAge: 3600, // Cookie expires in 1 hour
+                maxAge: 3600,
                 secure: true,
                 sameSite: 'strict'
             });
         } catch (error) {
-            console.error('Error fetching data:', error);
-            toast.error('Failed to load campaigns');
+            console.error("Error fetching data:", error);
+            toast.error("Failed to load campaigns");
         } finally {
             setIsLoading(false);
         }
     };
+    
 
     useEffect(() => {
-        //Try to load data from cookie
-        const cookieData = cookies[`other_campaigns`]
-        if (cookieData) {
-            console.log(`other-campaigns: ${cookieData}`)
-            setCombined(deserializeCampaignData(cookieData))
-        }
-        //referesh data
-        fetchAllData();
+        const init = async () => {
+            const cookieData = cookies[`other_campaigns`];
+            if (cookieData) {
+                console.log(`other-campaigns: ${cookieData}`);
+                setCombined(deserializeCampaignData(cookieData));
+            }
+    
+            const isAdmin = await checkIfAdmin(); // ✅ Wait for admin check
+            await fetchAllData(isAdmin);          // ✅ Pass result into data fetch
+        };
+    
+        init();
     }, []);
+    
 
     if (isLoading) {
         return (

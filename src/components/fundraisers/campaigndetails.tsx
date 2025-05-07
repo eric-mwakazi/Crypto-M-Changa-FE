@@ -277,7 +277,7 @@ export default function CampaignDetails() {
             await withdrawFromCampaign(id,address,Number(formValueW.amount),formValueW.recipient)
 
         } catch (error) {
-            console.error(`Error When Donating: ${error}`)
+            console.error(`Error When withdrawing: ${error}`)
             toast.error(`${error}`)
         } finally {
             setFormValueW({recipient: '', amount : ''})
