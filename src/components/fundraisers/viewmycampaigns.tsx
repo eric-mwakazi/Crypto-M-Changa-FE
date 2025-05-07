@@ -1,11 +1,12 @@
-import { CampaignDataArgs, CombinedCampaignDataX, SerializedCampaignDataX } from "../../types"
-import { useState, useEffect, useMemo } from "react"
-import { useNavigate } from "react-router-dom"
-import { _web3 } from "../../blockchain-services/useCharityDonation"
-import { getBalanceAndAddress, myCampaigns, viewCampaignDetails, isActiveAdmin } from "../../blockchain-services/useCharityDonation"
-import { toast } from "react-toastify"
-import { supabase } from "../../supabase/supabaseClient"
-import { useCookies } from "react-cookie"
+import { CampaignDataArgs, CombinedCampaignDataX, SerializedCampaignDataX } from "../../types";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { _web3 } from "../../blockchain-services/useCharityDonation";
+import { getBalanceAndAddress, myCampaigns, viewCampaignDetails, isActiveAdmin } from "../../blockchain-services/useCharityDonation";
+import { toast } from "react-toastify";
+import { supabase } from "../../supabase/supabaseClient";
+import { useCookies } from "react-cookie";
+import React from "react";
 
 export default function ViewMyCampaigns({ status }: { status: string }) {
     const [isLoading, setIsLoading] = useState(true);
@@ -19,61 +20,45 @@ export default function ViewMyCampaigns({ status }: { status: string }) {
         navigate(`/campaign-details?address=${address}&id=${id}`);
     }
 
-    // Memoized filter function
-    const filterCampaigns = useMemo(() => (
-        campaigns: CampaignDataArgs[]
-    ): CampaignDataArgs[] => {
+    const filterCampaigns = useMemo(() => (campaigns: CampaignDataArgs[]): CampaignDataArgs[] => {
+        // ... (your filterCampaigns logic)
+        console.log(`Filtering owned campaigns for status: ${status}`, campaigns);
         switch (status) {
             case 'Active':
-                return campaigns.filter(campaign => 
-                    !campaign.isCompleted && !campaign.isCancelled
-                );
+                return campaigns.filter(campaign => !campaign.isCompleted && !campaign.isCancelled);
             case 'Completed':
-                return campaigns.filter(campaign => 
-                    campaign.isCompleted
-                );
+                return campaigns.filter(campaign => campaign.isCompleted);
             case 'Cancelled':
-                return campaigns.filter(campaign => 
-                    campaign.isCancelled
-                );
+                return campaigns.filter(campaign => campaign.isCancelled);
             default:
                 return campaigns;
         }
     }, [status]);
 
-    const filterCampaignsAdmin = useMemo(() => (
-        campaigns: CombinedCampaignDataX[]
-    ): CombinedCampaignDataX[] => {
+    const filterCampaignsAdmin = useMemo(() => (campaigns: CombinedCampaignDataX[]): CombinedCampaignDataX[] => {
+        // ... (your filterCampaignsAdmin logic)
+        console.log(`Filtering admin campaigns for status: ${status}`, campaigns);
         switch (status) {
             case 'Active':
-                return campaigns.filter(campaign => 
-                    !campaign.isCompleted && !campaign.isCancelled
-                );
+                return campaigns.filter(campaign => !campaign.isCompleted && !campaign.isCancelled);
             case 'Completed':
-                return campaigns.filter(campaign => 
-                    campaign.isCompleted
-                );
+                return campaigns.filter(campaign => campaign.isCompleted);
             case 'Cancelled':
-                return campaigns.filter(campaign => 
-                    campaign.isCancelled
-                );
+                return campaigns.filter(campaign => campaign.isCancelled);
             default:
                 return campaigns;
         }
     }, [status]);
 
-    // Memoized search function
     const filteredCampaigns = useMemo(() => {
         if (!searchQuery.trim()) return combined;
-        
         const query = searchQuery.toLowerCase();
-        return combined.filter(campaign => 
+        return combined.filter(campaign =>
             campaign.title.toLowerCase().includes(query) ||
             campaign.campaignAddress.toString().toLowerCase().includes(query)
         );
     }, [combined, searchQuery]);
 
-    // Convert CombinedCampaignData to serialized form for cookie
     const serializeCampaignData = (data: CombinedCampaignDataX[]): SerializedCampaignDataX[] => {
         return data.map(campaign => ({
             campaign_id: campaign.campaign_id.toString(),
@@ -93,7 +78,6 @@ export default function ViewMyCampaigns({ status }: { status: string }) {
         }));
     };
 
-    // Convert serialized data back to CombinedCampaignData
     const deserializeCampaignData = (data: SerializedCampaignDataX[]): CombinedCampaignDataX[] => {
         return data.map(campaign => ({
             campaign_id: BigInt(campaign.campaign_id),
@@ -112,134 +96,119 @@ export default function ViewMyCampaigns({ status }: { status: string }) {
             campaignKey: campaign.campaignKey
         }));
     };
-
-    // Combined fetch function
-    const fetchAllData = async () => {
+    const fetchAllData = useCallback(async () => {
         try {
             setIsLoading(true);
             const balanceAndAddress = await getBalanceAndAddress();
-            if (!balanceAndAddress) {
-                throw new Error('Failed to get balance and address');
-            }
+            if (!balanceAndAddress) throw new Error('Failed to get balance and address');
             const { account } = balanceAndAddress;
-
-            // Fetch owned campaigns
-            const [campaigns, { data: imageData, error: imageError }] = await Promise.all([
-                myCampaigns(),
-                supabase
-                    .from('unduguimages')
-                    .select('*')
-                    .ilike('fraddress', account)
-            ]);
-
-            if (imageError) {
-                throw new Error(`Error fetching images: ${imageError.message}`);
-            }
-
-            const filteredCampaigns = filterCampaigns(campaigns);
-            const ownedCampaigns = filteredCampaigns.map((campaign) => {
-                const image = imageData?.find(
-                    (img) => img.frid === Number(campaign.campaign_id)
-                );
-
-                const deadline = new Date(
-                    Number(campaign.deadline) * 1000
-                ).toLocaleDateString();
-
+    
+            // Step 1: Fetch all image data once
+            const { data: allImageData, error: imageError } = await supabase
+                .from('unduguimages')
+                .select('*');
+            if (imageError) throw new Error(`Error fetching images: ${imageError.message}`);
+    
+            // Step 2: Fetch owned campaigns
+            const [ownedCampaignsRaw] = await Promise.all([myCampaigns()]);
+            const filteredOwnedCampaigns = filterCampaigns(ownedCampaignsRaw);
+    
+            const ownedCampaignsWithImage = filteredOwnedCampaigns.map((campaign) => {
+                const image = allImageData?.find(img =>
+                    img.frid === String(campaign.campaign_id) &&  // ✅ Convert to string
+                    img.fraddress.toLowerCase() === campaign.campaignAddress.toLowerCase()
+                );                
+    
+                const deadline = new Date(Number(campaign.deadline) * 1000).toLocaleDateString();
                 const progress = Math.round(
                     Number(campaign.raisedAmount * BigInt(100) / campaign.targetAmount)
                 );
-
+    
                 return {
                     ...campaign,
-                    imageUrl: image?.url || null,
+                    imageUrl: image?.url ?? null,
                     endDate: deadline,
                     progress: progress.toString(),
-                    campaignKey: `${campaign.campaignAddress}-${campaign.campaign_id}` // Add unique key
+                    campaignKey: `${campaign.campaignAddress}-${campaign.campaign_id}`
                 };
             });
-
-            // Fetch admin campaigns
-            const { data: allImageData } = await supabase.from('unduguimages').select('*');
+    
+            // Step 3: Admin campaigns
             const adminCampaignsPromises = allImageData?.map(async (campaign) => {
                 try {
                     const amAnAdmin = await isActiveAdmin(account, campaign.fraddress);
-                    if (amAnAdmin) {
-                        const thisCampaign = await viewCampaignDetails(campaign.frid, campaign.fraddress);
-                        const { details } = thisCampaign as { details: CampaignDataArgs };
-
-                        const deadline = new Date(Number(details.deadline) * 1000).toLocaleDateString();
-                        const progress = Math.round(
-                            Number(details.raisedAmount * BigInt(100) / details.targetAmount)
-                        );
-
-                        return {
-                            ...details,
-                            imageUrl: campaign?.url || null,
-                            endDate: deadline,
-                            progress: progress.toString(),
-                            campaignKey: `${details.campaignAddress}-${details.campaign_id}` // Add unique key
-                        };
-                    }
-                    return null;
+                    if (!amAnAdmin) return null;
+    
+                    const thisCampaign = await viewCampaignDetails(campaign.frid, campaign.fraddress);
+                    const { details } = thisCampaign as { details: CampaignDataArgs };
+                    const deadline = new Date(Number(details.deadline) * 1000).toLocaleDateString();
+                    const progress = Math.round(
+                        Number(details.raisedAmount * BigInt(100) / details.targetAmount)
+                    );
+    
+                    return {
+                        ...details,
+                        imageUrl: campaign?.url ?? null,
+                        endDate: deadline,
+                        progress: progress.toString(),
+                        campaignKey: `${details.campaignAddress}-${details.campaign_id}`
+                    };
                 } catch (error) {
-                    console.error(`Error fetching campaign ${campaign.frid}:`, error);
+                    console.error(`Error fetching admin campaign ${campaign.frid}:`, error);
                     return null;
                 }
             }) || [];
-
+    
             const adminCampaigns = (await Promise.all(adminCampaignsPromises))
-                .filter((campaign): campaign is CombinedCampaignDataX => 
-                    campaign !== null && campaign !== undefined
-                );
-
+                .filter((c): c is CombinedCampaignDataX => c !== null && c !== undefined);
+    
             const filteredAdminCampaigns = filterCampaignsAdmin(adminCampaigns);
-
-            // Combine campaigns using the unique campaignKey
+    
+            // Step 4: Merge uniquely
             const campaignMap = new Map<string, CombinedCampaignDataX>();
-            
-            // Add owned campaigns to map
-            ownedCampaigns.forEach(campaign => {
-                campaignMap.set(campaign.campaignKey, campaign);
+            ownedCampaignsWithImage.forEach(c => campaignMap.set(c.campaignKey, c));
+            filteredAdminCampaigns.forEach(c => {
+                if (!campaignMap.has(c.campaignKey)) campaignMap.set(c.campaignKey, c);
             });
-
-            // Add admin campaigns to map
-            filteredAdminCampaigns.forEach(campaign => {
-                if (!campaignMap.has(campaign.campaignKey)) {
-                    campaignMap.set(campaign.campaignKey, campaign);
-                }
-            });
-
-            // Convert map values back to array
+    
             const mergedCampaigns = Array.from(campaignMap.values());
             setCombined(mergedCampaigns);
-
-            //set cookies
+    
+            // Step 5: Cache in cookie
             const cookieName = status as "Active" | "Completed" | "Cancelled";
-            setCookie(cookieName, serializeCampaignData(mergedCampaigns), {
+            const serialized = serializeCampaignData(mergedCampaigns);
+            setCookie(cookieName, serialized, {
                 path: '/my-fundraisers',
-                maxAge: 3600, // Cookie expires in 1 hour
+                maxAge: 3600,
                 secure: true,
                 sameSite: 'strict'
             });
-
+    
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('Error fetching campaigns:', error);
             toast.error('Failed to load campaigns');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [filterCampaigns, filterCampaignsAdmin, setCookie, status]);
+    
+    
 
     useEffect(() => {
         const cookieName = status as "Active" | "Completed" | "Cancelled";
-        const cookieData = cookies[cookieName]
+        const cookieData = cookies[cookieName];
         if (cookieData) {
-            console.log(`${cookieName}: ${cookieData}`)
-            setCombined(deserializeCampaignData(cookieData))
+            console.log(`Retrieved cookie '${cookieName}':`, cookieData);
+            setCombined(deserializeCampaignData(cookieData));
+            console.log("Cookies on mount:", cookies);
+            console.log("Deserialized cookie data:", deserializeCampaignData(cookieData));
+
+        } else {
+            console.log(`No cookie found for status: ${status}`);
+            fetchAllData(); // safe now
         }
-        fetchAllData();
-    }, [status]);
+    }, [status, cookies.Active, cookies.Completed, cookies.Cancelled, fetchAllData]);
+    
 
     if (isLoading) {
         return (
@@ -280,10 +249,9 @@ export default function ViewMyCampaigns({ status }: { status: string }) {
             {/* Campaign Cards */}
             <div className="m-1 p-1 flex flex-wrap justify-center items-center">
                 {filteredCampaigns.map(campaign => (
-                    <>
+                    <React.Fragment key={campaign.campaignKey}>
                         {campaign.imageUrl && (
-                            <div 
-                                key={`${campaign.campaignAddress}-${campaign.campaign_id}`}
+                            <div
                                 className="card card-compact bg-white/10  overflow-hidden md:w-1/4 w-full md:h-1/2 shadow-lg m-2 border border-green-200 dark:border-gray-500 hover:border-green-500 transition duration-300 hover:cursor-pointer"
                                 onClick={() => handleRedirect(
                                     campaign.campaign_id.toString(),
@@ -298,7 +266,7 @@ export default function ViewMyCampaigns({ status }: { status: string }) {
                                         loading="lazy"
                                     />
                                 </figure>
-                           
+
                                 <div className="card-body">
                                     <h2 className="text-xl font-semibold w-full line-clamp-2">
                                         {campaign.title}
@@ -321,7 +289,7 @@ export default function ViewMyCampaigns({ status }: { status: string }) {
                                         </p>
                                     </div>
                                     <div>
-                                        <progress 
+                                        <progress
                                             className="progress progress-success w-full"
                                             value={campaign.progress}
                                             max="100"
@@ -334,7 +302,7 @@ export default function ViewMyCampaigns({ status }: { status: string }) {
                                 </div>
                             </div>
                         )}
-                    </>
+                    </React.Fragment>
                 ))}
             </div>
 
